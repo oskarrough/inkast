@@ -1,0 +1,25 @@
+{
+  "name": "inkast",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "alchemy deploy",
+    "plan": "alchemy plan"
+  },
+  "packageManager": "pnpm@10.34.6",
+  "dependencies": {
+    "@effect/platform-bun": "^4.0.6",
+    "@effect/platform-node": "^4.0.6",
+    "alchemy": "2.0.0-beta.83",
+    "effect": "^4.0.6"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "workerd"
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "typescript": "^7.0.2"
+  }
+}
