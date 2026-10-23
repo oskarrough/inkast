@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@effect/platform-bun':
-        specifier: ^4.0.6
-        version: 4.0.6(effect@4.0.6)
       '@effect/platform-node':
         specifier: ^4.0.6
         version: 4.0.6(effect@4.0.6)(redis@6.3.0)
@@ -1406,6 +1403,7 @@ snapshots:
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
+    optional: true
 
   '@effect/platform-node-shared@4.0.6(effect@4.0.6)':
     dependencies:

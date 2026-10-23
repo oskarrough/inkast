@@ -6,11 +6,11 @@
     "dev": "alchemy dev",
     "deploy": "alchemy deploy",
     "plan": "alchemy plan",
+    "test": "bun test",
     "typecheck": "tsc -p ."
   },
   "packageManager": "pnpm@10.34.6",
   "dependencies": {
-    "@effect/platform-bun": "^4.0.6",
     "@effect/platform-node": "^4.0.6",
     "alchemy": "2.0.0-beta.83",
     "effect": "^4.0.6"

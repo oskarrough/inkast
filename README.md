@@ -80,12 +80,16 @@ Per IP and minute: 5 lists made, 30 strings sent, 120 reads. Rough, enough to st
 
 Spam protection beyond rate limits, names instead of ids, email in, retention, recovering a lost key.
 
+## No guarantees
+
+A side project, run as is. Don't send it anything you can't lose.
+
 ## Develop
 
 ```sh
 pnpm install
-pnpm dev                                # runs locally on http://localhost:1337
-test/smoke.sh http://localhost:1337     # the API, end to end
-test/ratelimit.sh http://localhost:1337 # the 429s, run it apart from smoke.sh
+pnpm dev                     # runs locally on http://localhost:1337
+pnpm test                    # the API end to end, on a local stack
+ALCHEMY_TEST_DEV=0 pnpm test # the same, deployed to a test stage on Cloudflare
 pnpm alchemy deploy --stage prod
 ```

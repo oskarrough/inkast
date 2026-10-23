@@ -7,9 +7,7 @@ export default Alchemy.Stack(
   "inkast",
   {
     providers: Cloudflare.providers(),
-    // Deploys keep state in Cloudflare. `alchemy dev` runs everything locally,
-    // so its state stays in .alchemy/ on this machine too.
-    state: process.env.ALCHEMY_DEV ? Alchemy.localState() : Cloudflare.state(),
+    state: Effect.runSync(Alchemy.ALCHEMY_DEV) ? Alchemy.localState() : Cloudflare.state(),
   },
   Effect.gen(function* () {
     const worker = yield* Worker;
