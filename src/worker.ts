@@ -1,5 +1,4 @@
 import * as Cloudflare from "alchemy/Cloudflare";
-import { Stage } from "alchemy/Stage";
 import * as Effect from "effect/Effect";
 import { HttpServerRequest } from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
@@ -84,7 +83,7 @@ export default Cloudflare.Worker(
   "Worker",
   {
     main: import.meta.url,
-    domain: Effect.map(Stage, (stage) => (stage === "prod" ? "inkast.0sk.ar" : undefined)),
+    domain: "inkast.0sk.ar",
   },
   Effect.gen(function* () {
     const lists = yield* List;
