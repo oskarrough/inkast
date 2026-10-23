@@ -21,6 +21,11 @@ const json = (status: number, body: unknown) =>
   HttpServerResponse.jsonUnsafe(body, { status, headers: cors });
 const empty = (status: number) => HttpServerResponse.empty({ status, headers: cors });
 
+const tooMany = HttpServerResponse.text("too many requests, slow down\n", {
+  status: 429,
+  headers: { ...cors, "retry-after": "60" },
+});
+
 const notFound = text(404, "not found");
 const gone = text(410, "this list was deleted");
 const unauthorized = text(401, "missing or wrong key");
@@ -71,12 +76,29 @@ export default Cloudflare.Worker(
   },
   Effect.gen(function* () {
     const lists = yield* List;
+    // Per IP, counted roughly per Cloudflare location. Only the open calls
+    // are limited; everything else needs a key.
+    const creates = yield* Cloudflare.RateLimit("CREATES", {
+      namespaceId: 4651,
+      simple: { limit: 5, period: 60 },
+    });
+    const writes = yield* Cloudflare.RateLimit("WRITES", {
+      namespaceId: 4652,
+      simple: { limit: 30, period: 60 },
+    });
+    // Fails open: if the limiter itself breaks, let the request through.
+    const allowed = (limiter: typeof creates, ip: string) =>
+      limiter.limit({ key: ip }).pipe(
+        Effect.map(({ success }) => success),
+        Effect.catchTag("RateLimitError", () => Effect.succeed(true)),
+      );
 
     return {
       fetch: Effect.gen(function* () {
         const request = yield* HttpServerRequest;
         const url = new URL((yield* Cloudflare.Request).url);
         const method = request.method;
+        const ip = request.headers["cf-connecting-ip"] ?? "unknown";
         const [id, entry, ...rest] = url.pathname.split("/").filter(Boolean);
 
         if (method === "OPTIONS") return empty(204);
@@ -85,6 +107,7 @@ export default Cloudflare.Worker(
         if (id === undefined) {
           if (method === "GET") return text(200, usage(url.origin));
           if (method !== "POST") return text(405, "method not allowed");
+          if (!(yield* allowed(creates, ip))) return tooMany;
           for (let attempt = 0; attempt < 3; attempt++) {
             const id = newId();
             const key = newKey();
@@ -123,6 +146,7 @@ export default Cloudflare.Worker(
 
         // POST /<id>
         if (method === "POST") {
+          if (!(yield* allowed(writes, ip))) return tooMany;
           const length = Number(request.headers["content-length"] ?? 0);
           if (length > MAX_BYTES) return text(413, "a string can be at most 4 KB");
           const body = yield* request.arrayBuffer;
@@ -164,5 +188,5 @@ export default Cloudflare.Worker(
         return text(405, "method not allowed");
       }),
     };
-  }),
+  }).pipe(Effect.provide(Cloudflare.Workers.RateLimitBinding)),
 );
