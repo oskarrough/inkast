@@ -103,10 +103,6 @@ Spam protection beyond rough rate limits, names instead of ids, email in, retent
 - Each IP can make 5 lists, send 30 strings and make 120 other calls a minute. Past that it gets a 429. IPv6 addresses count per /64. The counts are rough, kept per Cloudflare location, so they stop a runaway script rather than a determined attacker.
 - Any website can send and read, CORS allows every origin.
 
-## Thanks
-
-Inspired by [ntfy](https://ntfy.sh): a name in the URL, no signup, one curl line, and `since` to keep your place. The one real difference: on ntfy.sh the topic is both write address and read secret. inkast splits it in two.
-
 ## Develop
 
 ```sh

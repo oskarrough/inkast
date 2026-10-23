@@ -1,47 +1,40 @@
-import { marked } from "marked";
-import readme from "../README.md";
-
-// The landing page is the README, plus a button that makes a list.
 export const home = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>inkast</title>
 <style>
-  body { font: 17px/1.6 Georgia, serif; max-width: 42rem; margin: 3rem auto; padding: 0 1.25rem; color: #222; background: #fdfcf8; }
-  h1 { font-size: 3rem; margin: 0 0 .25rem; letter-spacing: -.02em; }
+  body { font: 17px/1.6 Georgia, serif; max-width: 38rem; margin: 4rem auto; padding: 0 1.25rem; color: #222; background: #fdfcf8; }
+  h1 { font-size: 3rem; margin: 0; letter-spacing: -.02em; }
   h1 + p { font-size: 1.25rem; margin-top: 0; }
-  h2 { margin-top: 2.5rem; font-size: 1.2rem; }
-  code, pre { font: 14px/1.5 ui-monospace, Menlo, monospace; }
+  pre, code { font: 14px/1.6 ui-monospace, Menlo, monospace; }
   pre { background: #f2efe6; padding: .9rem 1rem; overflow-x: auto; border-radius: 4px; }
-  :not(pre) > code { background: #f2efe6; padding: .1em .3em; border-radius: 3px; }
-  a { color: inherit; }
-  #make { margin: 1.5rem 0; padding: 1rem 1.1rem; border: 2px solid #222; border-radius: 4px; }
-  #make button { font: inherit; padding: .4rem .9rem; cursor: pointer; }
+  button { font: inherit; padding: .4rem .9rem; cursor: pointer; }
   #made { word-break: break-all; }
+  a { color: inherit; }
 </style>
-<div id="readme">${marked.parse(readme)}</div>
+<h1>inkast</h1>
+<p>A list anyone can add to and only you can read, set up in thirty seconds.</p>
+<p>A slot every project can get thrown into. Swedish for the letter slot in a door; Danish <em>indkast</em>, a contribution thrown into a discussion.</p>
+<p><button id="make">Make a list</button></p>
+<div id="made"></div>
+<pre>curl -X POST https://inkast.0sk.ar
+curl -d "the save button does nothing" https://inkast.0sk.ar/&lt;id&gt;
+curl -H "Authorization: Bearer &lt;key&gt;" https://inkast.0sk.ar/&lt;id&gt;</pre>
+<p><a href="https://github.com/oskarrough/inkast#readme">How it works</a></p>
 <script>
-  const make = document.createElement("div");
-  make.id = "make";
-  make.innerHTML = '<button>Make a list</button> <span id="made">or use curl, as below.</span>';
-  document.querySelector("#readme h1 + p + p").after(make);
-  make.querySelector("button").onclick = async () => {
+  document.getElementById("make").onclick = async () => {
+    const made = document.getElementById("made");
     const res = await fetch("/", { method: "POST" });
-    const made = make.querySelector("#made");
     if (!res.ok) return (made.textContent = await res.text());
     const list = await res.json();
-    made.innerHTML = "";
-    const line = (label, value, href) => {
+    made.replaceChildren(...[["Send to", list.write], ["Read at", list.read, true], ["Key, shown once:", list.key]].map(([label, value, link]) => {
       const p = document.createElement("p");
-      const a = document.createElement(href ? "a" : "code");
-      a.textContent = value;
-      if (href) a.href = href;
-      p.append(label + " ", a);
-      made.append(p);
-    };
-    line("Send to", list.write);
-    line("Read at", list.read, list.read);
-    line("Key, shown once:", list.key);
+      const v = document.createElement(link ? "a" : "code");
+      v.textContent = value;
+      if (link) v.href = value;
+      p.append(label + " ", v);
+      return p;
+    }));
   };
 </script>
 `;
