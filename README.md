@@ -46,7 +46,9 @@ fetch("https://inkast.0sk.ar/<id>", {
 
 A string is plain text, up to 4 KB. Nothing is kept but the string and the time it arrived, so put any context you want into the string itself, like the page it came from.
 
-A list holds 10,000 strings.
+CORS is open to any origin, for adding and for reading.
+
+A list holds 10,000 strings. A full list refuses new ones with a 413, and keeps everything it has, until you delete some.
 
 ## Read it
 
