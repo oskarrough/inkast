@@ -116,13 +116,14 @@ export default class List extends Cloudflare.DurableObject<List>()(
             }),
           ),
 
-        // Deletes the strings and the key, and leaves the marker.
+        // Deletes the strings, blanks the key hash, and leaves the marker.
+        // deleted_at is what says "gone"; the blank hash just keeps nothing.
         destroy: (hash: string) =>
           withKey(hash, () =>
             Effect.gen(function* () {
               yield* (yield* sql.exec("DROP TABLE entries")).toArray();
               yield* (yield* sql.exec(
-                "UPDATE meta SET deleted_at = ?",
+                "UPDATE meta SET key_hash = '', deleted_at = ?",
                 Math.floor(Date.now() / 1000),
               )).toArray();
               return true;
