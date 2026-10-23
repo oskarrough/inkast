@@ -1,14 +1,19 @@
 # inkast
-A list anyone can add to and only you can read, set up in thirty seconds.
 
-A slot every project can get thrown into. Swedish for the letter slot in a door; Danish *indkast*, a contribution thrown into a discussion.
+A list anyone can add to and only you can read.
 
-Every project wants a way for people to send feedback, and every project ends up building a little server for it. Storing a string is trivial; not having to run the trivial thing is the product. Project number five should cost thirty seconds, not a backend. inkast is ingest only. What happens to the strings is your business: read them, or point an agent at the list every hour.
+```
+anyone ──URL──▶ ┃       ┃
+anyone ──URL──▶ ┃  list ┃ ──key──▶ you
+anyone ──URL──▶ ┃       ┃
+```
+
+inkast is a hosted list. Make one and you get a URL and a key. Anyone with the URL can add to the list. Anyone with the key can read it, or delete it. Nothing in between: no editing, no accounts.
 
 ```sh
-curl -X POST https://inkast.0sk.ar                                     # make a list
-curl -d "the save button does nothing" https://inkast.0sk.ar/x7k2q9mf  # anyone adds to it
-curl -H "Authorization: Bearer k_8f3a…" https://inkast.0sk.ar/x7k2q9mf # only you read it
+curl -X POST https://inkast.0sk.ar                                  # make a list
+curl -d "the save button does nothing" https://inkast.0sk.ar/<id>   # anyone adds to it
+curl -H "Authorization: Bearer <key>" https://inkast.0sk.ar/<id>    # only you read it
 ```
 
 ## Make a list
@@ -30,78 +35,50 @@ The key is shown once. Whoever holds it owns the list.
 
 ## Add to it
 
-Anyone, from anywhere, no account and no SDK:
+Anyone can, from any page, without an account:
 
 ```js
-fetch("https://inkast.0sk.ar/x7k2q9mf", {
+fetch("https://inkast.0sk.ar/<id>", {
   method: "POST",
   body: `${location.href}\n${message}`,
 })
 ```
 
-A string is plain text, up to 4 KB. Nothing is stored but the string and the time it arrived, so put any context you want into the string itself, like the page it came from.
+A string is plain text, up to 4 KB. Nothing is kept but the string and the time it arrived, so put any context you want into the string itself, like the page it came from.
+
+A list holds 10,000 strings.
 
 ## Read it
 
 Open the `read` link in a browser to see the list and delete from it. Or ask for JSON:
 
 ```sh
-curl -H "Authorization: Bearer k_8f3a…" "https://inkast.0sk.ar/x7k2q9mf?since=41"
+curl -H "Authorization: Bearer <key>" "https://inkast.0sk.ar/<id>?since=41"
 ```
 
 ```json
 [{ "id": 42, "time": 1792764855, "text": "the save button does nothing" }]
 ```
 
-Reading never removes anything. Ids count up per list, so a reader keeps its place with `?since=<last id>`. A read returns at most 1,000 strings; ask again from the last id for more. An agent checking in every hour needs only this:
-
-```sh
-SINCE=$(cat .inkast-since 2>/dev/null || echo 0)
-NEW=$(curl -s -H "Authorization: Bearer $INKAST_KEY" "https://inkast.0sk.ar/x7k2q9mf?since=$SINCE")
-echo "$NEW" | jq -r '.[].text'
-echo "$NEW" | jq -r ".[-1].id // $SINCE" > .inkast-since
-```
+Reading never removes anything. Ids count up per list, so a reader keeps its place with `?since=<last id>`. A read returns at most 1,000 strings; ask again from the last id for more.
 
 ## Delete
 
 ```sh
-curl -X DELETE -H "Authorization: Bearer k_8f3a…" https://inkast.0sk.ar/x7k2q9mf/42    # one string
-curl -X DELETE -H "Authorization: Bearer k_8f3a…" https://inkast.0sk.ar/x7k2q9mf/all   # all strings
-curl -X DELETE -H "Authorization: Bearer k_8f3a…" https://inkast.0sk.ar/x7k2q9mf       # the list
+curl -X DELETE -H "Authorization: Bearer <key>" https://inkast.0sk.ar/<id>/42    # one string
+curl -X DELETE -H "Authorization: Bearer <key>" https://inkast.0sk.ar/<id>/all   # all strings
+curl -X DELETE -H "Authorization: Bearer <key>" https://inkast.0sk.ar/<id>       # the list
 ```
 
-## With HTTPie
+Deleting the list is for good.
 
-```sh
-http POST inkast.0sk.ar                                       # make a list
-http POST inkast.0sk.ar/x7k2q9mf --raw "the save button does nothing"
-http -A bearer -a k_8f3a… inkast.0sk.ar/x7k2q9mf since==41     # read
-http -A bearer -a k_8f3a… DELETE inkast.0sk.ar/x7k2q9mf/42      # delete one
-```
+## Limits
 
-Send with `--raw` or pipe the text in. `text=hi` would send JSON, and `{"text": "hi"}` would become the string.
-
-A session keeps the key for you:
-
-```sh
-http --session=inkast -A bearer -a k_8f3a… inkast.0sk.ar/x7k2q9mf   # once
-http --session=inkast inkast.0sk.ar/x7k2q9mf                        # after that
-```
+Per IP and minute: 5 lists made, 30 strings sent, 120 reads. Rough, enough to stop a runaway script.
 
 ## Not yet
 
-Spam protection beyond rough rate limits, names instead of ids, email in, retention, recovering a lost key.
-
-## Details
-
-- The body is stored as-is, whatever the content type says, so `curl -d` works. An empty string gets a 400, anything over 4 KB a 413, never cut short.
-- Only lists made with `POST /` exist. Any other id gets a 404, and writing to it doesn't create one.
-- The key sits after the `#` in the read link, so it never reaches a server log. A browser opening the link therefore asks without a key, and the Accept header decides: a request for HTML gets a small page, which reads the key from the `#` and fetches the list with it. Any other request without the right key gets a 401.
-- Deleting all strings keeps the list and its key working, and ids keep counting up, so `?since=` never skips or repeats.
-- Deleting the list removes its strings and its key for good. Its id is never handed out again, since the write URL may still be pasted somewhere, and every request to it gets a 410.
-- A list holds up to 10,000 strings. Past that, sending gets a 413 until the owner deletes some.
-- Each IP can make 5 lists, send 30 strings and make 120 other calls a minute. Past that it gets a 429. IPv6 addresses count per /64. The counts are rough, kept per Cloudflare location, so they stop a runaway script rather than a determined attacker.
-- Any website can send and read, CORS allows every origin.
+Spam protection beyond rate limits, names instead of ids, email in, retention, recovering a lost key.
 
 ## Develop
 

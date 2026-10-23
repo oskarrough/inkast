@@ -13,8 +13,11 @@ export const home = `<!doctype html>
   a { color: inherit; }
 </style>
 <h1>inkast</h1>
-<p>A list anyone can add to and only you can read, set up in thirty seconds.</p>
-<p>A slot every project can get thrown into. Swedish for the letter slot in a door; Danish <em>indkast</em>, a contribution thrown into a discussion.</p>
+<p>A list anyone can add to and only you can read.</p>
+<pre>anyone ──URL──▶ ┃       ┃
+anyone ──URL──▶ ┃  list ┃ ──key──▶ you
+anyone ──URL──▶ ┃       ┃</pre>
+<p>Make one and you get a URL and a key. Anyone with the URL can add to the list. Anyone with the key can read it, or delete it. Nothing in between: no editing, no accounts.</p>
 <p><button id="make">Make a list</button></p>
 <div id="made"></div>
 <pre>curl -X POST https://inkast.0sk.ar
