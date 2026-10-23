@@ -79,7 +79,7 @@ const usage = (origin: string) => `inkast: a list anyone can add to and only you
 Make a list:
   curl -X POST ${origin}
 
-More: https://github.com/oskarrough/inkast`;
+Docs: https://raw.githubusercontent.com/oskarrough/inkast/main/README.md`;
 
 export default Cloudflare.Worker(
   "Worker",

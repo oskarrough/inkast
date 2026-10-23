@@ -21,6 +21,7 @@ anyone ──URL──▶ ┃       ┃</pre>
 <p><button id="make">Make a list</button></p>
 <div id="made"></div>
 <pre>curl -X POST https://inkast.0sk.ar
+# gives you an id + a secret key for reading and deleting the list.
 curl -d "the save button does nothing" https://inkast.0sk.ar/&lt;id&gt;
 curl -H "Authorization: Bearer &lt;key&gt;" https://inkast.0sk.ar/&lt;id&gt;</pre>
 <p><a href="https://github.com/oskarrough/inkast#readme">How it works</a></p>
