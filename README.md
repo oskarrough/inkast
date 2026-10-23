@@ -68,6 +68,24 @@ curl -X DELETE -H "Authorization: Bearer k_8f3a…" https://inkast.0sk.ar/x7k2q9
 curl -X DELETE -H "Authorization: Bearer k_8f3a…" https://inkast.0sk.ar/x7k2q9mf       # the list
 ```
 
+## With HTTPie
+
+```sh
+http POST inkast.0sk.ar                                       # make a list
+http POST inkast.0sk.ar/x7k2q9mf --raw "the save button does nothing"
+http -A bearer -a k_8f3a… inkast.0sk.ar/x7k2q9mf since==41     # read
+http -A bearer -a k_8f3a… DELETE inkast.0sk.ar/x7k2q9mf/42      # delete one
+```
+
+Send with `--raw` or pipe the text in. `text=hi` would send JSON, and `{"text": "hi"}` would become the string.
+
+A session keeps the key for you:
+
+```sh
+http --session=inkast -A bearer -a k_8f3a… inkast.0sk.ar/x7k2q9mf   # once
+http --session=inkast inkast.0sk.ar/x7k2q9mf                        # after that
+```
+
 ## Not yet
 
 Spam protection beyond rate limits, names instead of ids, email in, retention, recovering a lost key.
