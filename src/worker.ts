@@ -85,6 +85,7 @@ export default Cloudflare.Worker(
   {
     main: import.meta.url,
     domain: "inkast.0sk.ar",
+    build: { input: { moduleTypes: { ".md": "text" } } },
   },
   Effect.gen(function* () {
     const lists = yield* List;
@@ -122,6 +123,11 @@ export default Cloudflare.Worker(
         if (method === "OPTIONS") return done;
 
         if (id === undefined) {
+          if (method === "GET" && (request.headers["accept"] ?? "").includes("text/html")) {
+            // Imported late: the deploy tool loads this file in Node, which can't import Markdown.
+            const { home } = yield* Effect.promise(() => import("./home.ts"));
+            return HttpServerResponse.text(home, { headers: { ...cors, ...pageHeaders }, contentType: "text/html; charset=utf-8" });
+          }
           if (method === "GET") return text(200, usage(url.origin));
           if (method !== "POST") return notAllowed;
           if (!(yield* allowed(creates, ip))) return tooMany;

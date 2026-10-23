@@ -1,7 +1,9 @@
 # inkast
 A list anyone can add to and only you can read, set up in thirty seconds.
 
-Every project wants a way for people to send feedback, and every project ends up building a little server for it. Storing a string is trivial; not having to run the trivial thing is the point. inkast is ingest only. What happens to the strings is your business: read them, or point an agent at the list every hour.
+A slot every project can get thrown into. Swedish for the letter slot in a door; Danish *indkast*, a contribution thrown into a discussion.
+
+Every project wants a way for people to send feedback, and every project ends up building a little server for it. Storing a string is trivial; not having to run the trivial thing is the product. Project number five should cost thirty seconds, not a backend. inkast is ingest only. What happens to the strings is your business: read them, or point an agent at the list every hour.
 
 ```sh
 curl -X POST https://inkast.0sk.ar                                     # make a list
@@ -100,6 +102,10 @@ Spam protection beyond rough rate limits, names instead of ids, email in, retent
 - A list holds up to 10,000 strings. Past that, sending gets a 413 until the owner deletes some.
 - Each IP can make 5 lists, send 30 strings and make 120 other calls a minute. Past that it gets a 429. IPv6 addresses count per /64. The counts are rough, kept per Cloudflare location, so they stop a runaway script rather than a determined attacker.
 - Any website can send and read, CORS allows every origin.
+
+## Thanks
+
+Inspired by [ntfy](https://ntfy.sh): a name in the URL, no signup, one curl line, and `since` to keep your place. The one real difference: on ntfy.sh the topic is both write address and read secret. inkast splits it in two.
 
 ## Develop
 
