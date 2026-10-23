@@ -15,7 +15,7 @@ check "POST form-looking body" "$(code -d 'a=b&c=d' $B/$ID)" 201
 check "POST empty" "$(code -d '' $B/$ID)" 400
 check "POST whitespace" "$(code -d '   ' $B/$ID)" 400
 check "POST 5 KB" "$(head -c 5120 /dev/zero | tr '\0' x | code --data-binary @- $B/$ID)" 413
-check "POST 1 MB chunked, no length" "$(head -c 1048576 /dev/zero | tr '\0' x | code -H 'Transfer-Encoding: chunked' --data-binary @- $B/$ID)" 413
+check "POST 64 KB chunked, no length" "$(head -c 65536 /dev/zero | tr '\0' x | code -H 'Transfer-Encoding: chunked' --data-binary @- $B/$ID)" 413
 check "POST exactly 4 KB" "$(head -c 4096 /dev/zero | tr '\0' y | code --data-binary @- $B/$ID)" 201
 
 check "GET no key, Accept */*" "$(code -H 'Accept: */*' $B/$ID)" 401
