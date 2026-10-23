@@ -1,6 +1,4 @@
-// The page a browser gets for GET /<id>. The key lives after the # in the
-// read link, so it never reaches the server. The page reads it and fetches
-// the list as JSON with it.
+// The read link's page. It takes the key from after the # and fetches the list.
 export const page = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
