@@ -1,18 +1,21 @@
 import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
 import * as Effect from "effect/Effect";
+import Worker from "./src/worker.ts";
 
 export default Alchemy.Stack(
   "inkast",
   {
     providers: Cloudflare.providers(),
-    state: Cloudflare.state(),
+    // Deploys keep state in Cloudflare. `alchemy dev` runs everything locally,
+    // so its state stays in .alchemy/ on this machine too.
+    state: process.env.ALCHEMY_DEV ? Alchemy.localState() : Cloudflare.state(),
   },
   Effect.gen(function* () {
-    const bucket = yield* Cloudflare.R2.Bucket("Bucket");
+    const worker = yield* Worker;
 
     return {
-      bucketName: bucket.bucketName,
+      url: worker.url,
     };
   }),
 );
