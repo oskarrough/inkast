@@ -4,14 +4,14 @@ A list anyone can add to and only you can read, set up in thirty seconds.
 ## Make a list
 
 ```sh
-curl -X POST https://inkast.dev
+curl -X POST https://inkast.0sk.ar
 ```
 
 ```json
 {
   "id": "x7k2q9mf",
-  "write": "https://inkast.dev/x7k2q9mf",
-  "read": "https://inkast.dev/x7k2q9mf#k_8f3a…",
+  "write": "https://inkast.0sk.ar/x7k2q9mf",
+  "read": "https://inkast.0sk.ar/x7k2q9mf#k_8f3a…",
   "key": "k_8f3a…"
 }
 ```
@@ -23,11 +23,11 @@ The key is shown once. Whoever holds it owns the list.
 Anyone, from anywhere:
 
 ```sh
-curl -d "the save button does nothing" https://inkast.dev/x7k2q9mf
+curl -d "the save button does nothing" https://inkast.0sk.ar/x7k2q9mf
 ```
 
 ```js
-fetch("https://inkast.dev/x7k2q9mf", {
+fetch("https://inkast.0sk.ar/x7k2q9mf", {
   method: "POST",
   body: `${location.href}\n${message}`,
 })
@@ -38,8 +38,8 @@ A string is plain text, up to 4 KB. Nothing else is stored except the time it ar
 ## Read it
 
 ```sh
-curl -H "Authorization: Bearer k_8f3a…" https://inkast.dev/x7k2q9mf
-curl -H "Authorization: Bearer k_8f3a…" "https://inkast.dev/x7k2q9mf?since=41"
+curl -H "Authorization: Bearer k_8f3a…" https://inkast.0sk.ar/x7k2q9mf
+curl -H "Authorization: Bearer k_8f3a…" "https://inkast.0sk.ar/x7k2q9mf?since=41"
 ```
 
 ```json
@@ -53,8 +53,8 @@ Open the `read` link in a browser to see the list. The key sits after the `#`, s
 ## Delete
 
 ```sh
-curl -X DELETE -H "Authorization: Bearer k_8f3a…" https://inkast.dev/x7k2q9mf/42   # one
-curl -X DELETE -H "Authorization: Bearer k_8f3a…" https://inkast.dev/x7k2q9mf      # all
+curl -X DELETE -H "Authorization: Bearer k_8f3a…" https://inkast.0sk.ar/x7k2q9mf/42   # one
+curl -X DELETE -H "Authorization: Bearer k_8f3a…" https://inkast.0sk.ar/x7k2q9mf      # all
 ```
 
 ## Not yet
