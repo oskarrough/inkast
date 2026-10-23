@@ -29,17 +29,29 @@ check "DELETE one" "$(code -X DELETE -H "$A" $B/$ID/3)" 204
 check "DELETE same again" "$(code -X DELETE -H "$A" $B/$ID/3)" 404
 check "new POST after delete gets id 4" "$(curl -s -d 'after delete' $B/$ID | jq .id)" 4
 check "ids now" "$(curl -s -H "$A" $B/$ID | jq -c '[.[].id]')" "[1,2,4]"
-check "DELETE all no key" "$(code -X DELETE $B/$ID)" 401
-check "DELETE all" "$(code -X DELETE -H "$A" $B/$ID)" 204
+check "DELETE all no key" "$(code -X DELETE $B/$ID/all)" 401
+check "DELETE all" "$(code -X DELETE -H "$A" $B/$ID/all)" 204
 check "list empty after delete all" "$(curl -s -H "$A" $B/$ID)" "[]"
 check "POST after delete all gets id 5" "$(curl -s -d 'still works' $B/$ID | jq .id)" 5
 check "key still works" "$(curl -s -H "$A" $B/$ID | jq -c '[.[].id]')" "[5]"
+check "DELETE list no key" "$(code -X DELETE $B/$ID)" 401
+check "DELETE list wrong key" "$(code -X DELETE -H 'Authorization: Bearer k_nope' $B/$ID)" 401
+check "list survived wrong key" "$(curl -s -H "$A" $B/$ID | jq -c '[.[].id]')" "[5]"
+check "DELETE list" "$(code -X DELETE -H "$A" $B/$ID)" 204
+check "deleted: POST" "$(code -d 'too late' $B/$ID)" 410
+check "deleted: GET with key" "$(code -H "$A" $B/$ID)" 410
+check "deleted: GET no key" "$(code $B/$ID)" 410
+check "deleted: GET html" "$(code -H 'Accept: text/html' $B/$ID)" 410
+check "deleted: DELETE one" "$(code -X DELETE -H "$A" $B/$ID/5)" 410
+check "deleted: DELETE all" "$(code -X DELETE -H "$A" $B/$ID/all)" 410
+check "deleted: DELETE list again" "$(code -X DELETE -H "$A" $B/$ID)" 410
 U=zzzz9999
 check "unknown POST" "$(code -d hello $B/$U)" 404
 check "unknown GET html" "$(code -H 'Accept: text/html' $B/$U)" 404
 check "unknown GET with key" "$(code -H "$A" $B/$U)" 404
 check "unknown GET no key" "$(code $B/$U)" 404
 check "unknown DELETE" "$(code -X DELETE -H "$A" $B/$U)" 404
+check "unknown DELETE all" "$(code -X DELETE -H "$A" $B/$U/all)" 404
 check "unknown POST again (still not a list)" "$(code -d hello $B/$U)" 404
 check "malformed id" "$(code -d hello $B/NOT-AN-ID)" 404
 check "OPTIONS preflight" "$(code -X OPTIONS -H 'Origin: https://example.com' -H 'Access-Control-Request-Method: GET' -H 'Access-Control-Request-Headers: authorization' $B/$ID)" 204

@@ -22,7 +22,12 @@ const json = (status: number, body: unknown) =>
 const empty = (status: number) => HttpServerResponse.empty({ status, headers: cors });
 
 const notFound = text(404, "not found");
+const gone = text(410, "this list was deleted");
 const unauthorized = text(401, "missing or wrong key");
+
+// The answer for a request that never got as far as the list's data.
+const refuse = (status: "missing" | "gone" | "denied" | "live") =>
+  status === "missing" ? notFound : status === "gone" ? gone : unauthorized;
 
 const random = (bytes: number) => crypto.getRandomValues(new Uint8Array(bytes));
 
@@ -100,15 +105,19 @@ export default Cloudflare.Worker(
         const list = lists.getByName(id);
         const key = bearer(request.headers["authorization"]);
 
-        // DELETE /<id>/<n>
+        // DELETE /<id>/all and DELETE /<id>/<n>
         if (entry !== undefined) {
           if (method !== "DELETE") return text(405, "method not allowed");
+          if (entry === "all") {
+            if (key === undefined) return refuse(yield* list.status());
+            const cleared = yield* list.clear(yield* sha256(key));
+            return typeof cleared === "string" ? refuse(cleared) : empty(204);
+          }
           const n = Number(entry);
           if (!Number.isInteger(n) || n < 1) return notFound;
-          if (key === undefined) return (yield* list.exists()) ? unauthorized : notFound;
+          if (key === undefined) return refuse(yield* list.status());
           const removed = yield* list.remove(yield* sha256(key), n);
-          if (removed === "missing") return notFound;
-          if (removed === "denied") return unauthorized;
+          if (typeof removed === "string") return refuse(removed);
           return removed ? empty(204) : notFound;
         }
 
@@ -122,7 +131,7 @@ export default Cloudflare.Worker(
           const string = new TextDecoder().decode(body);
           if (string.trim() === "") return text(400, "empty string");
           const added = yield* list.append(string);
-          if (added === "missing") return notFound;
+          if (typeof added === "string") return refuse(added);
           return json(201, added);
         }
 
@@ -133,25 +142,23 @@ export default Cloudflare.Worker(
           // from the hash and fetches the list itself.
           const accept = request.headers["accept"] ?? "";
           if (key === undefined && accept.includes("text/html")) {
-            if (!(yield* list.exists())) return notFound;
+            const status = yield* list.status();
+            if (status !== "live") return refuse(status);
             return HttpServerResponse.text(page, { headers: cors, contentType: "text/html; charset=utf-8" });
           }
-          if (key === undefined) return (yield* list.exists()) ? unauthorized : notFound;
+          if (key === undefined) return refuse(yield* list.status());
           const since = Number(url.searchParams.get("since") ?? 0);
           if (!Number.isInteger(since)) return text(400, "since must be a whole number");
           const entries = yield* list.read(yield* sha256(key), since);
-          if (entries === "missing") return notFound;
-          if (entries === "denied") return unauthorized;
+          if (typeof entries === "string") return refuse(entries);
           return json(200, entries);
         }
 
-        // DELETE /<id>
+        // DELETE /<id> deletes the list. Its id is never handed out again.
         if (method === "DELETE") {
-          if (key === undefined) return (yield* list.exists()) ? unauthorized : notFound;
-          const cleared = yield* list.clear(yield* sha256(key));
-          if (cleared === "missing") return notFound;
-          if (cleared === "denied") return unauthorized;
-          return empty(204);
+          if (key === undefined) return refuse(yield* list.status());
+          const destroyed = yield* list.destroy(yield* sha256(key));
+          return typeof destroyed === "string" ? refuse(destroyed) : empty(204);
         }
 
         return text(405, "method not allowed");

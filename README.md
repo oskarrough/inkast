@@ -55,11 +55,14 @@ Open the `read` link in a browser to see the list. The key sits after the `#`, s
 ## Delete
 
 ```sh
-curl -X DELETE -H "Authorization: Bearer k_8f3a…" https://inkast.0sk.ar/x7k2q9mf/42   # one
-curl -X DELETE -H "Authorization: Bearer k_8f3a…" https://inkast.0sk.ar/x7k2q9mf      # all
+curl -X DELETE -H "Authorization: Bearer k_8f3a…" https://inkast.0sk.ar/x7k2q9mf/42    # one string
+curl -X DELETE -H "Authorization: Bearer k_8f3a…" https://inkast.0sk.ar/x7k2q9mf/all   # all strings
+curl -X DELETE -H "Authorization: Bearer k_8f3a…" https://inkast.0sk.ar/x7k2q9mf       # the list
 ```
 
-Deleting all clears the strings. The list and its key keep working, and ids keep counting up, so `?since=` never skips or repeats.
+Deleting all strings keeps the list and its key working, and ids keep counting up, so `?since=` never skips or repeats.
+
+Deleting the list removes its strings and its key for good. Its id is never handed out again, since the write URL may still be pasted somewhere, and every request to it gets a 410.
 
 ## Not yet
 
