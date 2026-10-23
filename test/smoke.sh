@@ -15,11 +15,13 @@ check "POST form-looking body" "$(code -d 'a=b&c=d' $B/$ID)" 201
 check "POST empty" "$(code -d '' $B/$ID)" 400
 check "POST whitespace" "$(code -d '   ' $B/$ID)" 400
 check "POST 5 KB" "$(head -c 5120 /dev/zero | tr '\0' x | code --data-binary @- $B/$ID)" 413
+check "POST 1 MB chunked, no length" "$(head -c 1048576 /dev/zero | tr '\0' x | code -H 'Transfer-Encoding: chunked' --data-binary @- $B/$ID)" 413
 check "POST exactly 4 KB" "$(head -c 4096 /dev/zero | tr '\0' y | code --data-binary @- $B/$ID)" 201
 
 check "GET no key, Accept */*" "$(code -H 'Accept: */*' $B/$ID)" 401
 check "GET wrong key" "$(code -H 'Authorization: Bearer k_nope' $B/$ID)" 401
 check "GET Accept text/html -> page" "$(curl -s -H 'Accept: text/html,application/xhtml+xml' -o /dev/null -w '%{http_code} %{content_type}' $B/$ID)" "200 text/html; charset=utf-8"
+check "page sends a CSP and no-store" "$(curl -s -D - -o /dev/null -H 'Accept: text/html' $B/$ID | grep -ciE '^(content-security-policy|cache-control: no-store)')" 2
 check "page reads the key from location.hash" "$(curl -s -H "Accept: text/html" $B/$ID | grep -c location.hash)" 1
 check "form body stored raw" "$(curl -s -H "$A" $B/$ID | jq -r '.[1].text')" "a=b&c=d"
 check "since=1 returns ids >1" "$(curl -s -H "$A" "$B/$ID?since=1" | jq -c '[.[].id]')" "[2,3]"

@@ -3,6 +3,10 @@ import * as Effect from "effect/Effect";
 
 type Entry = { id: number; time: number; text: string };
 
+// 10,000 strings of at most 4 KB keeps a list under 40 MB.
+const MAX_STRINGS = 10_000;
+const PAGE = 1000;
+
 const now = () => Math.floor(Date.now() / 1000);
 
 /**
@@ -64,6 +68,8 @@ export default class List extends Cloudflare.DurableObject<List>()(
         append: (text: string) =>
           live(() =>
             Effect.gen(function* () {
+              const [{ count }] = (yield* run("SELECT count(*) AS count FROM entries")) as { count: number }[];
+              if (count >= MAX_STRINGS) return "full" as const;
               const time = now();
               const [row] = (yield* run(
                 "INSERT INTO entries (time, text) VALUES (?, ?) RETURNING id",
@@ -77,7 +83,7 @@ export default class List extends Cloudflare.DurableObject<List>()(
         read: (hash: string | undefined, since: number) =>
           owned(hash, () =>
             Effect.map(
-              run("SELECT id, time, text FROM entries WHERE id > ? ORDER BY id", since),
+              run("SELECT id, time, text FROM entries WHERE id > ? ORDER BY id LIMIT ?", since, PAGE),
               (rows) => rows as Entry[],
             ),
           ),

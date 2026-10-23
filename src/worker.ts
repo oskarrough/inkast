@@ -20,13 +20,21 @@ const cors = {
 const text = (status: number, body: string, headers = {}) =>
   HttpServerResponse.text(body + "\n", { status, headers: { ...cors, ...headers } });
 const json = (status: number, body: unknown) =>
-  HttpServerResponse.jsonUnsafe(body, { status, headers: cors });
+  HttpServerResponse.jsonUnsafe(body, { status, headers: { ...cors, "cache-control": "no-store" } });
 const done = HttpServerResponse.empty({ status: 204, headers: cors });
 
 const notFound = text(404, "not found");
 const notAllowed = text(405, "method not allowed");
 const tooBig = text(413, "a string can be at most 4 KB");
+const full = text(413, "this list is full, delete some strings");
 const tooMany = text(429, "too many requests, slow down", { "retry-after": "60" });
+const pageHeaders = {
+  "content-security-policy":
+    "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+  "x-content-type-options": "nosniff",
+  "referrer-policy": "no-referrer",
+  "cache-control": "no-store",
+};
 const refusals = {
   missing: notFound,
   gone: text(410, "this list was deleted"),
@@ -41,6 +49,29 @@ const sha256 = (value: string) =>
   Effect.promise(() => crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))).pipe(
     Effect.map((digest) => hex(new Uint8Array(digest))),
   );
+
+// Stops reading once the body passes the limit, whatever Content-Length claimed.
+const readCapped = (body: ReadableStream<Uint8Array> | null) =>
+  Effect.promise(async () => {
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    if (body === null) return new Uint8Array();
+    const reader = body.getReader();
+    for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
+      size += chunk.value.byteLength;
+      if (size > MAX_BYTES) {
+        await reader.cancel();
+        return undefined;
+      }
+      chunks.push(chunk.value);
+    }
+    const all = new Uint8Array(size);
+    chunks.reduce((at, chunk) => (all.set(chunk, at), at + chunk.byteLength), 0);
+    return all;
+  });
+
+// One IPv6 user usually holds a whole /64, so that is what gets counted.
+const client = (ip: string) => (ip.includes(":") ? ip.split(":").slice(0, 4).join(":") : ip);
 
 const usage = (origin: string) => `inkast: a list anyone can add to and only you can read.
 
@@ -66,7 +97,11 @@ export default Cloudflare.Worker(
       namespaceId: 4652,
       simple: { limit: 30, period: 60 },
     });
-    // Fails open if the limiter itself breaks.
+    const lookups = yield* Cloudflare.RateLimit("LOOKUPS", {
+      namespaceId: 4653,
+      simple: { limit: 120, period: 60 },
+    });
+    // Fails open: a broken limiter shouldn't take the service down with it.
     const allowed = (limiter: typeof creates, ip: string) =>
       limiter.limit({ key: ip }).pipe(
         Effect.map(({ success }) => success),
@@ -76,9 +111,10 @@ export default Cloudflare.Worker(
     return {
       fetch: Effect.gen(function* () {
         const request = yield* HttpServerRequest;
-        const url = new URL((yield* Cloudflare.Request).url);
+        const raw = yield* Cloudflare.Request;
+        const url = new URL(raw.url);
         const method = request.method;
-        const ip = request.headers["cf-connecting-ip"] ?? "unknown";
+        const ip = client(request.headers["cf-connecting-ip"] ?? "unknown");
         const [id, entry, ...rest] = url.pathname.split("/").filter(Boolean);
         const answer = <A>(result: A | keyof typeof refusals, ok: (a: A) => HttpServerResponse.HttpServerResponse) =>
           typeof result === "string" && result in refusals ? refusals[result as keyof typeof refusals] : ok(result as A);
@@ -100,6 +136,7 @@ export default Cloudflare.Worker(
         }
 
         if (!ID.test(id) || rest.length > 0) return notFound;
+        if (method !== "POST" && !(yield* allowed(lookups, ip))) return tooMany;
         const list = lists.getByName(id);
         const key = request.headers["authorization"]?.match(/^Bearer\s+(\S+)$/i)?.[1];
         const hash = key === undefined ? undefined : yield* sha256(key);
@@ -115,12 +152,12 @@ export default Cloudflare.Worker(
         if (method === "POST") {
           if (!(yield* allowed(writes, ip))) return tooMany;
           if (Number(request.headers["content-length"] ?? 0) > MAX_BYTES) return tooBig;
-          const body = yield* request.arrayBuffer;
-          if (body.byteLength > MAX_BYTES) return tooBig;
+          const body = yield* readCapped(raw.body);
+          if (body === undefined) return tooBig;
           // Stored as-is, whatever the content type says (curl -d sends a form type).
           const string = new TextDecoder().decode(body);
           if (string.trim() === "") return text(400, "empty string");
-          return answer(yield* list.append(string), (added) => json(201, added));
+          return answer(yield* list.append(string), (added) => (added === "full" ? full : json(201, added)));
         }
 
         if (method === "GET") {
@@ -128,7 +165,7 @@ export default Cloudflare.Worker(
           // one. It gets the page, which reads the key and fetches the list.
           if (key === undefined && (request.headers["accept"] ?? "").includes("text/html")) {
             return answer(yield* list.status(), () =>
-              HttpServerResponse.text(page, { headers: cors, contentType: "text/html; charset=utf-8" }),
+              HttpServerResponse.text(page, { headers: { ...cors, ...pageHeaders }, contentType: "text/html; charset=utf-8" }),
             );
           }
           const since = Number(url.searchParams.get("since") ?? 0);

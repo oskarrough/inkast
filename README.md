@@ -51,7 +51,7 @@ curl -H "Authorization: Bearer k_8f3a…" "https://inkast.0sk.ar/x7k2q9mf?since=
 [{ "id": 42, "time": 1792764855, "text": "the save button does nothing" }]
 ```
 
-Reading never removes anything. Ids count up per list, so a reader keeps its place with `?since=<last id>`. An agent checking in every hour needs only this:
+Reading never removes anything. Ids count up per list, so a reader keeps its place with `?since=<last id>`. A read returns at most 1,000 strings; ask again from the last id for more. An agent checking in every hour needs only this:
 
 ```sh
 SINCE=$(cat .inkast-since 2>/dev/null || echo 0)
@@ -88,7 +88,7 @@ http --session=inkast inkast.0sk.ar/x7k2q9mf                        # after that
 
 ## Not yet
 
-Spam protection beyond rate limits, names instead of ids, email in, retention, recovering a lost key.
+Spam protection beyond rough rate limits, names instead of ids, email in, retention, recovering a lost key.
 
 ## Details
 
@@ -97,7 +97,8 @@ Spam protection beyond rate limits, names instead of ids, email in, retention, r
 - The key sits after the `#` in the read link, so it never reaches a server log. A browser opening the link therefore asks without a key, and the Accept header decides: a request for HTML gets a small page, which reads the key from the `#` and fetches the list with it. Any other request without the right key gets a 401.
 - Deleting all strings keeps the list and its key working, and ids keep counting up, so `?since=` never skips or repeats.
 - Deleting the list removes its strings and its key for good. Its id is never handed out again, since the write URL may still be pasted somewhere, and every request to it gets a 410.
-- Each IP can make 5 lists and send 30 strings a minute. Past that it gets a 429. Calls that need the key aren't limited.
+- A list holds up to 10,000 strings. Past that, sending gets a 413 until the owner deletes some.
+- Each IP can make 5 lists, send 30 strings and make 120 other calls a minute. Past that it gets a 429. IPv6 addresses count per /64. The counts are rough, kept per Cloudflare location, so they stop a runaway script rather than a determined attacker.
 - Any website can send and read, CORS allows every origin.
 
 ## Develop

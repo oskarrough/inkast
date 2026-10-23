@@ -25,9 +25,12 @@ export const page = `<!doctype html>
 
   async function load() {
     if (!key) return (status.textContent = "This link is missing its key (the part after #).");
-    const res = await call(location.pathname);
-    if (!res.ok) return (status.textContent = res.status === 401 ? "Wrong key." : res.status === 410 ? "This list was deleted." : "Error " + res.status);
-    const entries = await res.json();
+    const entries = [];
+    for (let page; !page || page.length === 1000; ) {
+      const res = await call(location.pathname + "?since=" + (entries.at(-1)?.id ?? 0));
+      if (!res.ok) return (status.textContent = res.status === 401 ? "Wrong key." : res.status === 410 ? "This list was deleted." : "Error " + res.status);
+      entries.push(...(page = await res.json()));
+    }
     status.textContent = entries.length + (entries.length === 1 ? " string" : " strings");
     clear.hidden = entries.length === 0;
     destroy.hidden = false;
