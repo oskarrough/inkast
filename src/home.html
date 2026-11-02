@@ -8,7 +8,6 @@
   h1 + p { font-size: 1.25rem; margin-top: 0; }
   pre, code { font: 14px/1.6 ui-monospace, Menlo, monospace; }
   pre { background: #f2efe6; padding: .9rem 1rem; overflow-x: auto; border-radius: 4px; }
-  button { font: inherit; padding: .4rem .9rem; cursor: pointer; }
   #made { word-break: break-all; }
   a { color: inherit; }
 </style>
@@ -17,28 +16,33 @@
 <pre>anyone ──URL──▶ ┃       ┃
 anyone ──URL──▶ ┃  list ┃ ──key──▶ you
 anyone ──URL──▶ ┃       ┃</pre>
-<p>Make one and you get a URL and a key. Anyone with the URL can add to the list. Anyone with the key can read it, or delete it. Nothing in between: no editing, no accounts.</p>
-<p><button id="make">Make a list</button></p>
-<div id="made"></div>
-<pre>curl -X POST https://inkast.0sk.ar
-# gives you an id + a secret key for reading and deleting the list.
-curl -d "the save button does nothing" https://inkast.0sk.ar/&lt;id&gt;
-curl -H "Authorization: Bearer &lt;key&gt;" https://inkast.0sk.ar/&lt;id&gt;</pre>
-<p><a href="https://github.com/oskarrough/inkast#readme">How it works</a></p>
-<p><small>A side project, no guarantees. Don't send it anything you can't lose.</small></p>
+<p>Make a list and you get a URL and a key.</p>
+<pre id="cmd">curl -X POST https://inkast.0sk.ar</pre>
+<p id="go"><button id="make">Make a list</button></p>
+<p>Anyone with the URL can add to the list. Anyone with the key can read it, or delete it. Nothing in between: no editing, no accounts.</p>
+<p><small><a href="https://github.com/oskarrough/inkast#readme">How it works</a>. A side project, no guarantees. Don't send it anything you can't lose.</small></p>
 <script>
   document.getElementById("make").onclick = async () => {
-    const made = document.getElementById("made");
+    const cmd = document.getElementById("cmd");
+    const go = document.getElementById("go");
     const res = await fetch("/", { method: "POST" });
-    if (!res.ok) return (made.textContent = await res.text());
-    const list = await res.json();
-    made.replaceChildren(...[["Send to", list.write], ["Read at", list.read, true], ["Key, shown once:", list.key]].map(([label, value, link]) => {
-      const p = document.createElement("p");
-      const v = document.createElement(link ? "a" : "code");
-      v.textContent = value;
-      if (link) v.href = value;
-      p.append(label + " ", v);
-      return p;
-    }));
+    if (!res.ok) return (go.textContent = await res.text());
+    const { id, key, write, read } = await res.json();
+    const auth = `-H "Authorization: Bearer ${key}"`;
+    cmd.textContent = `curl -X POST https://inkast.0sk.ar
+{ "id": "${id}", "key": "${key}" }
+
+# add to the list (anyone with the URL)
+curl -d "the save button does nothing" ${write}
+
+# read it (anyone with the key)
+curl ${auth} ${write}
+
+# delete it
+curl -X DELETE ${auth} ${write}`;
+    const a = document.createElement("a");
+    a.href = read;
+    a.textContent = "read it in your browser";
+    go.replaceChildren("Or ", a, ". The key is shown once, so keep it.");
   };
 </script>
