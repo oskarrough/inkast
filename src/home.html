@@ -9,7 +9,14 @@
   pre, code { font: 14px/1.6 ui-monospace, Menlo, monospace; }
   pre { background: #f2efe6; padding: .9rem 1rem; overflow-x: auto; border-radius: 4px; }
   button { font: inherit; padding: .4rem .9rem; cursor: pointer; }
-  #made { word-break: break-all; }
+  #made section { border: 1px solid #ddd6c4; border-radius: 4px; padding: .8rem 1rem; margin: 1rem 0; }
+  #made h2 { font-size: 1rem; margin: 0; }
+  #made p { margin: .3rem 0; }
+  #made code { display: block; word-break: break-all; background: #f2efe6; padding: .3rem .5rem; border-radius: 3px; margin: .4rem 0; }
+  #made form { display: flex; gap: .5rem; margin-top: .5rem; }
+  #made input { flex: 1; font: inherit; padding: .3rem .5rem; min-width: 0; }
+  .row { display: flex; gap: .5rem; flex-wrap: wrap; }
+  button, .button { font: inherit; padding: .3rem .8rem; cursor: pointer; border: 1px solid #888; border-radius: 3px; background: #fff; color: inherit; text-decoration: none; }
   a { color: inherit; }
 </style>
 <h1>inkast</h1>
@@ -20,25 +27,46 @@ anyone ──URL──▶ ┃       ┃</pre>
 <p>Make one and you get a URL and a key. Anyone with the URL can add to the list. Anyone with the key can read it, or delete it. Nothing in between: no editing, no accounts.</p>
 <p><button id="make">Make a list</button></p>
 <div id="made"></div>
-<pre>curl -X POST https://inkast.0sk.ar
+<pre id="usage">curl -X POST https://inkast.0sk.ar
 # gives you an id + a secret key for reading and deleting the list.
 curl -d "the save button does nothing" https://inkast.0sk.ar/&lt;id&gt;
 curl -H "Authorization: Bearer &lt;key&gt;" https://inkast.0sk.ar/&lt;id&gt;</pre>
 <p><a href="https://github.com/oskarrough/inkast#readme">How it works</a></p>
 <p><small>A side project, no guarantees. Don't send it anything you can't lose.</small></p>
 <script>
+  const make = (tag, props, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e; };
+  const copy = (value) => {
+    const b = make("button", { type: "button", textContent: "Copy" });
+    b.onclick = async () => { await navigator.clipboard.writeText(value); b.textContent = "Copied"; setTimeout(() => (b.textContent = "Copy"), 1500); };
+    return b;
+  };
+  const card = (title, text, value, ...extra) =>
+    make("section", {}, make("h2", { textContent: title }), make("p", { textContent: text }), make("code", { textContent: value }), make("div", { className: "row" }, copy(value), ...extra));
+
   document.getElementById("make").onclick = async () => {
     const made = document.getElementById("made");
     const res = await fetch("/", { method: "POST" });
     if (!res.ok) return (made.textContent = await res.text());
     const list = await res.json();
-    made.replaceChildren(...[["Send to", list.write], ["Read at", list.read, true], ["Key, shown once:", list.key]].map(([label, value, link]) => {
-      const p = document.createElement("p");
-      const v = document.createElement(link ? "a" : "code");
-      v.textContent = value;
-      if (link) v.href = value;
-      p.append(label + " ", v);
-      return p;
-    }));
+
+    const input = make("input", { name: "text", placeholder: "Try it: add a first string", required: true });
+    const sent = make("p");
+    const form = make("form", {}, input, make("button", { textContent: "Add" }));
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const r = await fetch(list.write, { method: "POST", body: input.value });
+      sent.textContent = r.ok ? "Added. Open your private link to see it." : await r.text();
+      if (r.ok) input.value = "";
+    };
+
+    made.replaceChildren(
+      card("1. Share this link", "Anyone, or any script, can add a string to your list by sending it here. It can't be used to read.", list.write, form, sent),
+      card("2. Keep this link private", "This is how you read and delete your list. Bookmark it now: it holds your key and we can't show it again.", list.read,
+        make("a", { className: "button", href: list.read, target: "_blank", textContent: "Open list" })),
+      card("3. Key for scripts", "Only if you read from code. It's already inside the private link above.", list.key),
+    );
+    document.getElementById("usage").textContent =
+      `curl -d "the save button does nothing" ${list.write}\ncurl -H "Authorization: Bearer ${list.key}" ${list.write}`;
+    document.getElementById("make").hidden = true;
   };
 </script>
