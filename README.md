@@ -13,7 +13,7 @@ inkast is a hosted list. Make one and you get a URL and a key. Anyone with the U
 ```sh
 curl -X POST https://inkast.0sk.ar                                  # make a list
 curl -d "the save button does nothing" https://inkast.0sk.ar/<id>   # anyone adds to it
-curl -H "Authorization: Bearer <key>" https://inkast.0sk.ar/<id>    # only you read it
+curl -H "Authorization: Bearer <key>" https://inkast.0sk.ar/<id>    # anyone with the key reads it
 ```
 
 ## Make a list
