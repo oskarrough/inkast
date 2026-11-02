@@ -16,33 +16,34 @@
 <pre>anyone ──URL──▶ ┃       ┃
 anyone ──URL──▶ ┃  list ┃ ──key──▶ you
 anyone ──URL──▶ ┃       ┃</pre>
-<p>Make a list and you get a URL and a key.</p>
+<p>Anyone with the URL can add to the list. Anyone with the key can read it, or delete it. Nothing in between: no editing, no accounts.</p>
 <pre id="cmd">curl -X POST https://inkast.0sk.ar</pre>
 <p id="go"><button id="make">Make a list</button></p>
-<p>Anyone with the URL can add to the list. Anyone with the key can read it, or delete it. Nothing in between: no editing, no accounts.</p>
-<p><small><a href="https://github.com/oskarrough/inkast#readme">How it works</a>. A side project, no guarantees. Don't send it anything you can't lose.</small></p>
+<p><small><a href="https://github.com/oskarrough/inkast#readme">Docs</a>. A side project, no guarantees. Don't send it anything you can't lose.</small></p>
 <script>
   document.getElementById("make").onclick = async () => {
     const cmd = document.getElementById("cmd");
     const go = document.getElementById("go");
-    const res = await fetch("/", { method: "POST" });
+    let res;
+    try {
+      res = await fetch("/", { method: "POST" });
+    } catch {
+      return (go.textContent = "Could not reach inkast. Check your connection and reload.");
+    }
     if (!res.ok) return (go.textContent = await res.text());
-    const { id, key, write, read } = await res.json();
+    const { key, write, read } = await res.json();
     const auth = `-H "Authorization: Bearer ${key}"`;
-    cmd.textContent = `curl -X POST https://inkast.0sk.ar
-{ "id": "${id}", "key": "${key}" }
-
-# add to the list (anyone with the URL)
+    cmd.textContent = `# anyone with the URL adds to it
 curl -d "the save button does nothing" ${write}
 
-# read it (anyone with the key)
+# anyone with the key reads it
 curl ${auth} ${write}
 
-# delete it
+# anyone with the key deletes it, for good
 curl -X DELETE ${auth} ${write}`;
     const a = document.createElement("a");
     a.href = read;
     a.textContent = "read it in your browser";
-    go.replaceChildren("Or ", a, ". The key is shown once, so keep it.");
+    go.replaceChildren("Or ", a, ". Bookmark that page; its link holds the key, and you won't see the key again.");
   };
 </script>
